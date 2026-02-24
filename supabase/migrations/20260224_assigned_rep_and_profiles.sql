@@ -65,6 +65,44 @@ begin
 end;
 $$;
 
+create or replace function public.enforce_deal_update_permissions()
+returns trigger
+language plpgsql
+as $$
+declare
+  current_user uuid;
+begin
+  current_user := auth.uid();
+
+  if current_user is null then
+    return new;
+  end if;
+
+  if public.is_admin(current_user) then
+    return new;
+  end if;
+
+  if new.created_by is distinct from old.created_by then
+    raise exception 'created_by cannot be changed';
+  end if;
+
+  if old.created_by is distinct from current_user and (
+    new.assignment_status is distinct from old.assignment_status
+    or new.assigned_rep_user_id is distinct from old.assigned_rep_user_id
+  ) then
+    raise exception 'Only the deal creator or an admin can change assignment fields';
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_deals_enforce_update_permissions on public.deals;
+create trigger trg_deals_enforce_update_permissions
+before update on public.deals
+for each row
+execute procedure public.enforce_deal_update_permissions();
+
 drop trigger if exists trg_user_profiles_updated_at on public.user_profiles;
 create trigger trg_user_profiles_updated_at
 before update on public.user_profiles

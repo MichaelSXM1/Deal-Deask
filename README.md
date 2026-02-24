@@ -53,6 +53,7 @@ Authorization: Bearer <CRON_SECRET>
 - Delete action wired to Supabase (admin only)
 - Account-based `Assigned Rep` selector (`assigned_rep_user_id`)
 - Supabase RLS for role-aware edit/delete logic (admin or creator/assigned-rep updates)
+- DB trigger hardening to keep `created_by` immutable and restrict assignment changes to creator/admin
 - Daily cron route that emails:
   - Assigned manager (`assigned_rep_user_id`) when `assignment_status = Assigned`
   - Admins when `assignment_status = Not Assigned`
