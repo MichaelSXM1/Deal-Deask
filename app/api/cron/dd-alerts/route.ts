@@ -82,6 +82,15 @@ export async function GET(request: Request) {
     return NextResponse.json({ ok: true, emailsSent: 0, dealsFound: 0 });
   }
 
+  const dueSoonDeals = (deadlineDeals as DeadlineDeal[]).filter((deal) => {
+    const left = hoursLeft(deal.dd_deadline);
+    return left <= 48;
+  });
+
+  if (dueSoonDeals.length === 0) {
+    return NextResponse.json({ ok: true, emailsSent: 0, dealsFound: 0 });
+  }
+
   const { data: admins, error: adminsError } = await supabase
     .from("user_roles")
     .select("user_id")
@@ -145,7 +154,7 @@ export async function GET(request: Request) {
 
   const sent: Array<{ dealId: string; recipients: string[] }> = [];
 
-  for (const deal of deadlineDeals as DeadlineDeal[]) {
+  for (const deal of dueSoonDeals) {
     let recipients: string[] = [];
 
     if (deal.assignment_status === "Not Assigned") {
@@ -189,7 +198,7 @@ export async function GET(request: Request) {
 
   return NextResponse.json({
     ok: true,
-    dealsFound: deadlineDeals.length,
+    dealsFound: dueSoonDeals.length,
     emailsSent: sent.length,
     sent
   });
