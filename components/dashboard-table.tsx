@@ -3,12 +3,19 @@
 import { type FormEvent, type ReactNode, useEffect, useMemo, useState } from "react";
 import { ArrowUpDown, Pencil, Plus, Trash2, X } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
-import type { AppRole, AssignmentStatus, Deal, DealStrategy } from "@/lib/types";
+import type {
+  AppRole,
+  AssignableUser,
+  AssignmentStatus,
+  Deal,
+  DealStrategy
+} from "@/lib/types";
 import { cn, formatCurrency, getDaysLeft } from "@/lib/utils";
 
 type SortableDealColumn =
   | "address"
   | "acq_manager_first_name"
+  | "assigned_rep_user_id"
   | "deal_strategy"
   | "contract_price"
   | "marketing_price"
@@ -19,6 +26,7 @@ type SortableDealColumn =
 
 interface DashboardTableProps {
   deals: Deal[];
+  assignableUsers: AssignableUser[];
   currentUserId: string;
   role: AppRole;
 }
@@ -33,6 +41,7 @@ interface DealFormValues {
   title_company: string;
   drive_link: string;
   assignment_status: AssignmentStatus;
+  assigned_rep_user_id: string;
 }
 
 const defaultDealValues: DealFormValues = {
@@ -44,7 +53,8 @@ const defaultDealValues: DealFormValues = {
   dd_deadline: "",
   title_company: "",
   drive_link: "",
-  assignment_status: "Not Assigned"
+  assignment_status: "Not Assigned",
+  assigned_rep_user_id: ""
 };
 
 function normalizeDeal(deal: Deal): Deal {
@@ -55,7 +65,8 @@ function normalizeDeal(deal: Deal): Deal {
     ...deal,
     contract_price: Number.isFinite(contractPrice) ? contractPrice : 0,
     marketing_price: Number.isFinite(marketingPrice) ? marketingPrice : 0,
-    drive_link: deal.drive_link ?? null
+    drive_link: deal.drive_link ?? null,
+    assigned_rep_user_id: deal.assigned_rep_user_id ?? null
   };
 }
 
@@ -69,11 +80,22 @@ function toFormValues(deal: Deal): DealFormValues {
     dd_deadline: deal.dd_deadline,
     title_company: deal.title_company,
     drive_link: deal.drive_link ?? "",
-    assignment_status: deal.assignment_status
+    assignment_status: deal.assignment_status,
+    assigned_rep_user_id: deal.assigned_rep_user_id ?? ""
   };
 }
 
-export function DashboardTable({ deals, currentUserId, role }: DashboardTableProps) {
+function getAssignableLabel(user: AssignableUser) {
+  const name = user.first_name?.trim();
+  return name ? `${name} (${user.email})` : user.email;
+}
+
+export function DashboardTable({
+  deals,
+  assignableUsers,
+  currentUserId,
+  role
+}: DashboardTableProps) {
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
   const [rows, setRows] = useState<Deal[]>(() => deals.map(normalizeDeal));
   const [sortBy, setSortBy] = useState<SortableDealColumn>("dd_deadline");
@@ -84,6 +106,14 @@ export function DashboardTable({ deals, currentUserId, role }: DashboardTablePro
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  const assignableLabelById = useMemo(() => {
+    const map = new Map<string, string>();
+    assignableUsers.forEach((user) => {
+      map.set(user.user_id, getAssignableLabel(user));
+    });
+    return map;
+  }, [assignableUsers]);
 
   useEffect(() => {
     setRows(deals.map(normalizeDeal));
@@ -116,18 +146,37 @@ export function DashboardTable({ deals, currentUserId, role }: DashboardTablePro
   async function handleCreate(values: DealFormValues) {
     setErrorMessage(null);
     setSuccessMessage(null);
+
+    const contractPrice = Number(values.contract_price);
+    const marketingPrice = Number(values.marketing_price);
+    const assignedRepUserId =
+      values.assignment_status === "Assigned"
+        ? values.assigned_rep_user_id || null
+        : null;
+
+    if (!Number.isFinite(contractPrice) || !Number.isFinite(marketingPrice)) {
+      setErrorMessage("Contract and marketing price must be valid numbers.");
+      return;
+    }
+
+    if (values.assignment_status === "Assigned" && !assignedRepUserId) {
+      setErrorMessage("Select an assigned rep when assignment status is Assigned.");
+      return;
+    }
+
     setIsSaving(true);
 
     const payload = {
       address: values.address.trim(),
       acq_manager_first_name: values.acq_manager_first_name.trim(),
       deal_strategy: values.deal_strategy,
-      contract_price: Number(values.contract_price),
-      marketing_price: Number(values.marketing_price),
+      contract_price: contractPrice,
+      marketing_price: marketingPrice,
       dd_deadline: values.dd_deadline,
       title_company: values.title_company.trim(),
       drive_link: values.drive_link.trim() || null,
-      assignment_status: values.assignment_status
+      assignment_status: values.assignment_status,
+      assigned_rep_user_id: assignedRepUserId
     };
 
     const { data, error } = await supabase
@@ -155,18 +204,37 @@ export function DashboardTable({ deals, currentUserId, role }: DashboardTablePro
 
     setErrorMessage(null);
     setSuccessMessage(null);
+
+    const contractPrice = Number(values.contract_price);
+    const marketingPrice = Number(values.marketing_price);
+    const assignedRepUserId =
+      values.assignment_status === "Assigned"
+        ? values.assigned_rep_user_id || null
+        : null;
+
+    if (!Number.isFinite(contractPrice) || !Number.isFinite(marketingPrice)) {
+      setErrorMessage("Contract and marketing price must be valid numbers.");
+      return;
+    }
+
+    if (values.assignment_status === "Assigned" && !assignedRepUserId) {
+      setErrorMessage("Select an assigned rep when assignment status is Assigned.");
+      return;
+    }
+
     setIsSaving(true);
 
     const payload = {
       address: values.address.trim(),
       acq_manager_first_name: values.acq_manager_first_name.trim(),
       deal_strategy: values.deal_strategy,
-      contract_price: Number(values.contract_price),
-      marketing_price: Number(values.marketing_price),
+      contract_price: contractPrice,
+      marketing_price: marketingPrice,
       dd_deadline: values.dd_deadline,
       title_company: values.title_company.trim(),
       drive_link: values.drive_link.trim() || null,
-      assignment_status: values.assignment_status
+      assignment_status: values.assignment_status,
+      assigned_rep_user_id: assignedRepUserId
     };
 
     const { data, error } = await supabase
@@ -258,6 +326,10 @@ export function DashboardTable({ deals, currentUserId, role }: DashboardTablePro
                   onClick={() => toggleSort("acq_manager_first_name")}
                 />
                 <HeaderCell
+                  label="Assigned Rep"
+                  onClick={() => toggleSort("assigned_rep_user_id")}
+                />
+                <HeaderCell
                   label="Strategy"
                   onClick={() => toggleSort("deal_strategy")}
                 />
@@ -294,7 +366,7 @@ export function DashboardTable({ deals, currentUserId, role }: DashboardTablePro
             <tbody className="divide-y divide-slate-100">
               {sortedDeals.length === 0 ? (
                 <tr>
-                  <td colSpan={11} className="px-4 py-8 text-center text-slate-500">
+                  <td colSpan={12} className="px-4 py-8 text-center text-slate-500">
                     No active deals yet.
                   </td>
                 </tr>
@@ -304,6 +376,9 @@ export function DashboardTable({ deals, currentUserId, role }: DashboardTablePro
                   const urgent = daysLeft <= 2;
                   const canEdit = role === "admin" || deal.created_by === currentUserId;
                   const canDelete = role === "admin";
+                  const assignedRepLabel = deal.assigned_rep_user_id
+                    ? assignableLabelById.get(deal.assigned_rep_user_id) ?? "Unknown User"
+                    : "-";
 
                   return (
                     <tr key={deal.id} className="hover:bg-slate-50">
@@ -312,6 +387,9 @@ export function DashboardTable({ deals, currentUserId, role }: DashboardTablePro
                       </td>
                       <td className="whitespace-nowrap px-4 py-3 text-slate-700">
                         {deal.acq_manager_first_name}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-slate-700">
+                        {assignedRepLabel}
                       </td>
                       <td className="whitespace-nowrap px-4 py-3 text-slate-700">
                         {deal.deal_strategy}
@@ -413,6 +491,7 @@ export function DashboardTable({ deals, currentUserId, role }: DashboardTablePro
         title="Add Deal"
         submitLabel="Create Deal"
         initialValues={defaultDealValues}
+        assignableUsers={assignableUsers}
         isSubmitting={isSaving}
         onClose={() => setIsCreateOpen(false)}
         onSubmit={handleCreate}
@@ -423,6 +502,7 @@ export function DashboardTable({ deals, currentUserId, role }: DashboardTablePro
         title="Edit Deal"
         submitLabel="Save Changes"
         initialValues={editingDeal ? toFormValues(editingDeal) : defaultDealValues}
+        assignableUsers={assignableUsers}
         isSubmitting={isSaving}
         onClose={() => setEditingDeal(null)}
         onSubmit={handleUpdate}
@@ -451,6 +531,7 @@ interface DealFormModalProps {
   title: string;
   submitLabel: string;
   initialValues: DealFormValues;
+  assignableUsers: AssignableUser[];
   isSubmitting: boolean;
   onClose: () => void;
   onSubmit: (values: DealFormValues) => Promise<void>;
@@ -461,6 +542,7 @@ function DealFormModal({
   title,
   submitLabel,
   initialValues,
+  assignableUsers,
   isSubmitting,
   onClose,
   onSubmit
@@ -482,6 +564,23 @@ function DealFormModal({
     value: DealFormValues[K]
   ) {
     setFormValues((current) => ({ ...current, [field]: value }));
+  }
+
+  function onAssignmentStatusChange(nextStatus: AssignmentStatus) {
+    setFormValues((current) => ({
+      ...current,
+      assignment_status: nextStatus,
+      assigned_rep_user_id:
+        nextStatus === "Not Assigned" ? "" : current.assigned_rep_user_id
+    }));
+  }
+
+  function onAssignedRepChange(nextUserId: string) {
+    setFormValues((current) => ({
+      ...current,
+      assigned_rep_user_id: nextUserId,
+      assignment_status: nextUserId ? "Assigned" : "Not Assigned"
+    }));
   }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -588,15 +687,27 @@ function DealFormModal({
                 required
                 value={formValues.assignment_status}
                 onChange={(event) =>
-                  updateValue(
-                    "assignment_status",
-                    event.target.value as AssignmentStatus
-                  )
+                  onAssignmentStatusChange(event.target.value as AssignmentStatus)
                 }
                 className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-cedar-500 focus:ring-2 focus:ring-cedar-100"
               >
                 <option value="Not Assigned">Not Assigned</option>
                 <option value="Assigned">Assigned</option>
+              </select>
+            </Field>
+
+            <Field label="Assigned Rep Account">
+              <select
+                value={formValues.assigned_rep_user_id}
+                onChange={(event) => onAssignedRepChange(event.target.value)}
+                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-cedar-500 focus:ring-2 focus:ring-cedar-100"
+              >
+                <option value="">None</option>
+                {assignableUsers.map((user) => (
+                  <option key={user.user_id} value={user.user_id}>
+                    {getAssignableLabel(user)}
+                  </option>
+                ))}
               </select>
             </Field>
           </div>

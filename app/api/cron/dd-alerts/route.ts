@@ -8,8 +8,19 @@ interface DeadlineDeal {
   address: string;
   dd_deadline: string;
   assignment_status: AssignmentStatus;
+  assigned_rep_user_id: string | null;
   created_by: string;
   acq_manager_first_name: string;
+}
+
+interface UserRoleRow {
+  user_id: string;
+}
+
+interface UserProfileRow {
+  user_id: string;
+  email: string;
+  first_name: string | null;
 }
 
 function isoDate(date: Date) {
@@ -18,7 +29,10 @@ function isoDate(date: Date) {
 
 function hoursLeft(deadlineDate: string) {
   const deadline = new Date(`${deadlineDate}T23:59:59`);
-  return Math.max(0, Math.round((deadline.getTime() - Date.now()) / (1000 * 60 * 60)));
+  return Math.max(
+    0,
+    Math.round((deadline.getTime() - Date.now()) / (1000 * 60 * 60))
+  );
 }
 
 export async function GET(request: Request) {
@@ -52,7 +66,7 @@ export async function GET(request: Request) {
   const { data: deadlineDeals, error: dealsError } = await supabase
     .from("deals")
     .select(
-      "id,address,dd_deadline,assignment_status,created_by,acq_manager_first_name"
+      "id,address,dd_deadline,assignment_status,assigned_rep_user_id,created_by,acq_manager_first_name"
     )
     .gte("dd_deadline", isoDate(today))
     .lte("dd_deadline", isoDate(inTwoDays));
@@ -80,17 +94,48 @@ export async function GET(request: Request) {
     );
   }
 
+  const { data: profiles, error: profilesError } = await supabase
+    .from("user_profiles")
+    .select("user_id,email,first_name");
+
+  if (profilesError) {
+    return NextResponse.json(
+      { error: `Failed to query user profiles: ${profilesError.message}` },
+      { status: 500 }
+    );
+  }
+
+  const profileById = new Map<string, UserProfileRow>();
+  for (const profile of (profiles ?? []) as UserProfileRow[]) {
+    profileById.set(profile.user_id, profile);
+  }
+
+  const emailCache = new Map<string, string | null>();
+  for (const [userId, profile] of profileById.entries()) {
+    emailCache.set(userId, profile.email);
+  }
+
+  async function resolveEmail(userId: string) {
+    if (emailCache.has(userId)) {
+      return emailCache.get(userId) ?? null;
+    }
+
+    const { data } = await supabase.auth.admin.getUserById(userId);
+    const email = data.user?.email ?? null;
+    emailCache.set(userId, email);
+    return email;
+  }
+
   const fallbackAdminEmails = (process.env.ADMIN_ALERT_EMAILS ?? "")
     .split(",")
     .map((email) => email.trim())
     .filter(Boolean);
 
   const adminEmailsFromRoles: string[] = [];
-
-  for (const admin of admins ?? []) {
-    const { data } = await supabase.auth.admin.getUserById(admin.user_id);
-    if (data.user?.email) {
-      adminEmailsFromRoles.push(data.user.email);
+  for (const admin of (admins ?? []) as UserRoleRow[]) {
+    const email = await resolveEmail(admin.user_id);
+    if (email) {
+      adminEmailsFromRoles.push(email);
     }
   }
 
@@ -106,8 +151,8 @@ export async function GET(request: Request) {
     if (deal.assignment_status === "Not Assigned") {
       recipients = adminEmails;
     } else {
-      const { data } = await supabase.auth.admin.getUserById(deal.created_by);
-      const assignedEmail = data.user?.email;
+      const targetUserId = deal.assigned_rep_user_id ?? deal.created_by;
+      const assignedEmail = await resolveEmail(targetUserId);
       recipients = assignedEmail ? [assignedEmail] : adminEmails;
     }
 
@@ -116,6 +161,9 @@ export async function GET(request: Request) {
     }
 
     const left = hoursLeft(deal.dd_deadline);
+    const assignedRep = deal.assigned_rep_user_id
+      ? profileById.get(deal.assigned_rep_user_id)?.first_name ?? "Assigned Rep"
+      : "Unassigned";
 
     const { error: emailError } = await resend.emails.send({
       from: process.env.ALERT_FROM_EMAIL || "onboarding@resend.dev",
@@ -123,6 +171,7 @@ export async function GET(request: Request) {
       subject: `DD Deadline Alert: ${deal.address}`,
       html: `<p><strong>Deal:</strong> ${deal.address}</p>
              <p><strong>Acq Manager:</strong> ${deal.acq_manager_first_name}</p>
+             <p><strong>Assigned Rep:</strong> ${assignedRep}</p>
              <p><strong>DD Deadline:</strong> ${deal.dd_deadline}</p>
              <p><strong>Time Remaining:</strong> ~${left} hours</p>
              <p>Open Cedar Deal Dashboard and take action.</p>`

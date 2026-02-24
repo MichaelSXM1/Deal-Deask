@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { DashboardTable } from "@/components/dashboard-table";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import type { AppRole, Deal } from "@/lib/types";
+import type { AppRole, AssignableUser, Deal } from "@/lib/types";
 
 async function getRole(userId: string): Promise<AppRole> {
   const supabase = await createSupabaseServerClient();
@@ -34,6 +34,10 @@ export default async function DashboardPage() {
   }
 
   const role = await getRole(user.id);
+  const { data: profiles } = await supabase
+    .from("user_profiles")
+    .select("user_id,email,first_name")
+    .order("first_name", { ascending: true });
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-7xl flex-col gap-4 px-4 py-8 sm:px-6 lg:px-8">
@@ -51,6 +55,7 @@ export default async function DashboardPage() {
 
       <DashboardTable
         deals={(deals as Deal[]) ?? []}
+        assignableUsers={(profiles as AssignableUser[]) ?? []}
         currentUserId={user.id}
         role={role}
       />

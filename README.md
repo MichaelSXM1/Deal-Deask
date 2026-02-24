@@ -31,6 +31,8 @@ Set these in `.env.local` and in Vercel Project Settings:
 1. Open Supabase SQL Editor.
 2. Run [`supabase/schema.sql`](./supabase/schema.sql).
 3. Ensure Michael and Nico are marked `admin` in `public.user_roles`.
+4. If your database was created from an older version of this repo, also run:
+   [`supabase/migrations/20260224_assigned_rep_and_profiles.sql`](./supabase/migrations/20260224_assigned_rep_and_profiles.sql)
 
 ## 4) Cron setup (Vercel free)
 
@@ -49,9 +51,10 @@ Authorization: Bearer <CRON_SECRET>
 - `DD Days Left` urgency badge (red when <= 2 days)
 - Add/Edit deal modal forms wired to Supabase
 - Delete action wired to Supabase (admin only)
+- Account-based `Assigned Rep` selector (`assigned_rep_user_id`)
 - Supabase RLS for role-aware edit/delete logic
 - Daily cron route that emails:
-  - Assigned manager (deal creator) when `assignment_status = Assigned`
+  - Assigned manager (`assigned_rep_user_id`) when `assignment_status = Assigned`
   - Admins when `assignment_status = Not Assigned`
 
 ## Notes
