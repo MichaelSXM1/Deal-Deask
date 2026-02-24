@@ -47,6 +47,8 @@ Authorization: Bearer <CRON_SECRET>
 
 - Global sortable single-table dashboard (`/`)
 - `DD Days Left` urgency badge (red when <= 2 days)
+- Add/Edit deal modal forms wired to Supabase
+- Delete action wired to Supabase (admin only)
 - Supabase RLS for role-aware edit/delete logic
 - Daily cron route that emails:
   - Assigned manager (deal creator) when `assignment_status = Assigned`
@@ -54,5 +56,5 @@ Authorization: Bearer <CRON_SECRET>
 
 ## Notes
 
-- The current table includes an `Edit` button state, but not the full edit modal/form yet.
-- This is intentionally minimal for speed and zero-cost operation.
+- Role enforcement is both UI-level and database-level (RLS is final authority).
+- This remains intentionally minimal for speed and zero-cost operation.
