@@ -39,6 +39,22 @@ add constraint deals_assignment_consistent check (
 
 create index if not exists idx_deals_assigned_rep on public.deals (assigned_rep_user_id);
 
+drop policy if exists "deals_update_admin_or_owner" on public.deals;
+create policy "deals_update_admin_or_owner"
+on public.deals
+for update
+to authenticated
+using (
+  public.is_admin(auth.uid())
+  or created_by = auth.uid()
+  or assigned_rep_user_id = auth.uid()
+)
+with check (
+  public.is_admin(auth.uid())
+  or created_by = auth.uid()
+  or assigned_rep_user_id = auth.uid()
+);
+
 create or replace function public.set_updated_at()
 returns trigger
 language plpgsql

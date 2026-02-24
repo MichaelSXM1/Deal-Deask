@@ -198,14 +198,22 @@ for insert
 to authenticated
 with check (created_by = auth.uid());
 
--- Admins can update anything. Acquisition managers can only update their own deals.
+-- Admins can update anything. Managers can update deals they created or are assigned to.
 drop policy if exists "deals_update_admin_or_owner" on public.deals;
 create policy "deals_update_admin_or_owner"
 on public.deals
 for update
 to authenticated
-using (public.is_admin(auth.uid()) or created_by = auth.uid())
-with check (public.is_admin(auth.uid()) or created_by = auth.uid());
+using (
+  public.is_admin(auth.uid())
+  or created_by = auth.uid()
+  or assigned_rep_user_id = auth.uid()
+)
+with check (
+  public.is_admin(auth.uid())
+  or created_by = auth.uid()
+  or assigned_rep_user_id = auth.uid()
+);
 
 -- Only admins can delete deals.
 drop policy if exists "deals_delete_admin_only" on public.deals;

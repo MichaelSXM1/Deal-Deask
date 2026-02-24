@@ -10,7 +10,7 @@ import type {
   Deal,
   DealStrategy
 } from "@/lib/types";
-import { cn, formatCurrency, getDaysLeft } from "@/lib/utils";
+import { cn, formatCurrency, getHoursLeft } from "@/lib/utils";
 
 type SortableDealColumn =
   | "address"
@@ -135,13 +135,23 @@ export function DashboardTable({
         return Number(a[sortBy]) - Number(b[sortBy]);
       }
 
+      if (sortBy === "assigned_rep_user_id") {
+        const leftLabel = a.assigned_rep_user_id
+          ? assignableLabelById.get(a.assigned_rep_user_id) ?? ""
+          : "";
+        const rightLabel = b.assigned_rep_user_id
+          ? assignableLabelById.get(b.assigned_rep_user_id) ?? ""
+          : "";
+        return leftLabel.localeCompare(rightLabel);
+      }
+
       const left = a[sortBy] ?? "";
       const right = b[sortBy] ?? "";
       return String(left).localeCompare(String(right));
     });
 
     return sortDirection === "asc" ? sorted : sorted.reverse();
-  }, [rows, sortBy, sortDirection]);
+  }, [assignableLabelById, rows, sortBy, sortDirection]);
 
   async function handleCreate(values: DealFormValues) {
     setErrorMessage(null);
@@ -372,9 +382,14 @@ export function DashboardTable({
                 </tr>
               ) : (
                 sortedDeals.map((deal) => {
-                  const daysLeft = getDaysLeft(deal.dd_deadline);
-                  const urgent = daysLeft <= 2;
-                  const canEdit = role === "admin" || deal.created_by === currentUserId;
+                  const hoursLeft = getHoursLeft(deal.dd_deadline);
+                  const urgent = hoursLeft <= 48;
+                  const overdue = hoursLeft < 0;
+                  const daysLeft = Math.ceil(hoursLeft / 24);
+                  const canEdit =
+                    role === "admin" ||
+                    deal.created_by === currentUserId ||
+                    deal.assigned_rep_user_id === currentUserId;
                   const canDelete = role === "admin";
                   const assignedRepLabel = deal.assigned_rep_user_id
                     ? assignableLabelById.get(deal.assigned_rep_user_id) ?? "Unknown User"
@@ -412,9 +427,13 @@ export function DashboardTable({
                               : "bg-emerald-100 text-emerald-700"
                           )}
                         >
-                          {daysLeft < 0
-                            ? `${Math.abs(daysLeft)} days overdue`
-                            : `${daysLeft} days`}
+                          {overdue
+                            ? Math.abs(hoursLeft) < 24
+                              ? `${Math.abs(hoursLeft)}h overdue`
+                              : `${Math.ceil(Math.abs(hoursLeft) / 24)} days overdue`
+                            : urgent
+                              ? `${hoursLeft}h`
+                              : `${daysLeft} days`}
                         </span>
                       </td>
                       <td className="whitespace-nowrap px-4 py-3 text-slate-700">
@@ -492,6 +511,7 @@ export function DashboardTable({
         submitLabel="Create Deal"
         initialValues={defaultDealValues}
         assignableUsers={assignableUsers}
+        canManageAssignment
         isSubmitting={isSaving}
         onClose={() => setIsCreateOpen(false)}
         onSubmit={handleCreate}
@@ -503,6 +523,10 @@ export function DashboardTable({
         submitLabel="Save Changes"
         initialValues={editingDeal ? toFormValues(editingDeal) : defaultDealValues}
         assignableUsers={assignableUsers}
+        canManageAssignment={
+          role === "admin" ||
+          (editingDeal ? editingDeal.created_by === currentUserId : false)
+        }
         isSubmitting={isSaving}
         onClose={() => setEditingDeal(null)}
         onSubmit={handleUpdate}
@@ -532,6 +556,7 @@ interface DealFormModalProps {
   submitLabel: string;
   initialValues: DealFormValues;
   assignableUsers: AssignableUser[];
+  canManageAssignment: boolean;
   isSubmitting: boolean;
   onClose: () => void;
   onSubmit: (values: DealFormValues) => Promise<void>;
@@ -543,6 +568,7 @@ function DealFormModal({
   submitLabel,
   initialValues,
   assignableUsers,
+  canManageAssignment,
   isSubmitting,
   onClose,
   onSubmit
@@ -689,6 +715,7 @@ function DealFormModal({
                 onChange={(event) =>
                   onAssignmentStatusChange(event.target.value as AssignmentStatus)
                 }
+                disabled={!canManageAssignment}
                 className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-cedar-500 focus:ring-2 focus:ring-cedar-100"
               >
                 <option value="Not Assigned">Not Assigned</option>
@@ -700,6 +727,7 @@ function DealFormModal({
               <select
                 value={formValues.assigned_rep_user_id}
                 onChange={(event) => onAssignedRepChange(event.target.value)}
+                disabled={!canManageAssignment}
                 className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-cedar-500 focus:ring-2 focus:ring-cedar-100"
               >
                 <option value="">None</option>
@@ -711,6 +739,12 @@ function DealFormModal({
               </select>
             </Field>
           </div>
+
+          {!canManageAssignment ? (
+            <p className="text-xs text-slate-500">
+              Only the deal creator or an admin can change assignment fields.
+            </p>
+          ) : null}
 
           <Field label="Google Drive Link">
             <input

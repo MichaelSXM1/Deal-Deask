@@ -13,8 +13,12 @@ export function formatCurrency(value: number) {
   }).format(value);
 }
 
-export function getDaysLeft(ddDeadline: string) {
+export function getHoursLeft(ddDeadline: string) {
   const endOfDeadline = new Date(`${ddDeadline}T23:59:59`);
-  const msPerDay = 1000 * 60 * 60 * 24;
-  return Math.ceil((endOfDeadline.getTime() - Date.now()) / msPerDay);
+  const msPerHour = 1000 * 60 * 60;
+  return Math.round((endOfDeadline.getTime() - Date.now()) / msPerHour);
+}
+
+export function getDaysLeft(ddDeadline: string) {
+  return Math.ceil(getHoursLeft(ddDeadline) / 24);
 }

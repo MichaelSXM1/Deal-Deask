@@ -48,11 +48,11 @@ Authorization: Bearer <CRON_SECRET>
 ## 5) What is implemented
 
 - Global sortable single-table dashboard (`/`)
-- `DD Days Left` urgency badge (red when <= 2 days)
+- `DD Days Left` urgency badge (red at <= 48 hours)
 - Add/Edit deal modal forms wired to Supabase
 - Delete action wired to Supabase (admin only)
 - Account-based `Assigned Rep` selector (`assigned_rep_user_id`)
-- Supabase RLS for role-aware edit/delete logic
+- Supabase RLS for role-aware edit/delete logic (admin or creator/assigned-rep updates)
 - Daily cron route that emails:
   - Assigned manager (`assigned_rep_user_id`) when `assignment_status = Assigned`
   - Admins when `assignment_status = Not Assigned`
