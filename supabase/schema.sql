@@ -120,15 +120,15 @@ returns trigger
 language plpgsql
 as $$
 declare
-  current_user uuid;
+  auth_user_id uuid;
 begin
-  current_user := auth.uid();
+  auth_user_id := auth.uid();
 
-  if current_user is null then
+  if auth_user_id is null then
     return new;
   end if;
 
-  if public.is_admin(current_user) then
+  if public.is_admin(auth_user_id) then
     return new;
   end if;
 
@@ -138,7 +138,7 @@ begin
   end if;
 
   -- Assigned reps can edit deal details, but only creator/admin can reassign ownership.
-  if old.created_by is distinct from current_user and (
+  if old.created_by is distinct from auth_user_id and (
     new.assignment_status is distinct from old.assignment_status
     or new.assigned_rep_user_id is distinct from old.assigned_rep_user_id
   ) then
