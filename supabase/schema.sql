@@ -8,10 +8,12 @@ begin
   if not exists (
     select 1 from pg_type where typname = 'deal_strategy' and typnamespace = 'public'::regnamespace
   ) then
-    create type public.deal_strategy as enum ('Cash', 'Seller Finance', 'Subto');
+    create type public.deal_strategy as enum ('Cash', 'Seller Finance', 'Subto', 'Stacked');
   end if;
 end
 $$;
+
+alter type public.deal_strategy add value if not exists 'Stacked';
 
 do $$
 begin

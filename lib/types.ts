@@ -1,4 +1,4 @@
-export type DealStrategy = "Cash" | "Seller Finance" | "Subto";
+export type DealStrategy = "Cash" | "Seller Finance" | "Subto" | "Stacked";
 
 export type AssignmentStatus = "Not Assigned" | "Assigned";
 

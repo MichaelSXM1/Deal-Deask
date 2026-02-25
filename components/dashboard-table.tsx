@@ -674,6 +674,7 @@ function DealFormModal({
                 <option value="Cash">Cash</option>
                 <option value="Seller Finance">Seller Finance</option>
                 <option value="Subto">Subto</option>
+                <option value="Stacked">Stacked</option>
               </select>
             </Field>
 

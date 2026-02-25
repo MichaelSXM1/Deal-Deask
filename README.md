@@ -37,6 +37,8 @@ Set these in `.env.local` and in Vercel Project Settings:
    [`supabase/migrations/20260225_buyers_access_columns.sql`](./supabase/migrations/20260225_buyers_access_columns.sql)
 6. Then run:
    [`supabase/migrations/20260225_buyers_toggle_rpc.sql`](./supabase/migrations/20260225_buyers_toggle_rpc.sql)
+7. Then run:
+   [`supabase/migrations/20260225_add_stacked_strategy.sql`](./supabase/migrations/20260225_add_stacked_strategy.sql)
 
 ## 4) Cron setup (Vercel free)
 
