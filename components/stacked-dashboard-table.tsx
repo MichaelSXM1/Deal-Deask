@@ -48,12 +48,12 @@ const defaultStackedValues: StackedDealFormValues = {
 };
 
 const stageColumns: Array<{ key: StageKey; label: string }> = [
-  { key: "psa_signed", label: "PSA" },
-  { key: "buyer_signed", label: "Buyer" },
-  { key: "emd_in", label: "EMD" },
-  { key: "lender_secured", label: "Lender" },
-  { key: "appraisal_done", label: "Appraisal" },
-  { key: "clear_to_close", label: "CTC" }
+  { key: "psa_signed", label: "PSA Signed" },
+  { key: "buyer_signed", label: "Buyer Signed" },
+  { key: "emd_in", label: "EMD In" },
+  { key: "lender_secured", label: "Lender Secured" },
+  { key: "appraisal_done", label: "Appraisal Done" },
+  { key: "clear_to_close", label: "Clear to Close" }
 ];
 
 function normalizeStackedDeal(deal: StackedDeal): StackedDeal {
@@ -346,12 +346,13 @@ export function StackedDashboardTable({
               <HeaderCell label="Net Buyer" onClick={() => toggleSort("net_to_buyer")} />
               <HeaderCell label="Fee" onClick={() => toggleSort("assignment_fee")} />
               <HeaderCell label="Cashflow" onClick={() => toggleSort("cashflow")} />
-              <HeaderCell label="PSA" onClick={() => toggleSort("psa_signed")} />
-              <HeaderCell label="Buyer" onClick={() => toggleSort("buyer_signed")} />
-              <HeaderCell label="EMD" onClick={() => toggleSort("emd_in")} />
-              <HeaderCell label="Lender" onClick={() => toggleSort("lender_secured")} />
-              <HeaderCell label="Appraisal" onClick={() => toggleSort("appraisal_done")} />
-              <HeaderCell label="CTC" onClick={() => toggleSort("clear_to_close")} />
+              {stageColumns.map((stage) => (
+                <HeaderCell
+                  key={stage.key}
+                  label={stage.label}
+                  onClick={() => toggleSort(stage.key)}
+                />
+              ))}
               <th className="px-2 py-2 text-left font-semibold text-slate-700">Actions</th>
             </tr>
           </thead>
