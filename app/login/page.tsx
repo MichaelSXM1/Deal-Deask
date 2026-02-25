@@ -1,12 +1,21 @@
 "use client";
 
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useEffect, useState } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [hasAuthError, setHasAuthError] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    const url = new URL(window.location.href);
+    setHasAuthError(url.searchParams.get("error") === "auth_callback");
+  }, []);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -18,7 +27,9 @@ export default function LoginPage() {
       email,
       options: {
         emailRedirectTo:
-          typeof window !== "undefined" ? `${window.location.origin}/` : undefined
+          typeof window !== "undefined"
+            ? `${window.location.origin}/auth/confirm?next=/`
+            : undefined
       }
     });
 
@@ -67,6 +78,11 @@ export default function LoginPage() {
           </button>
         </form>
 
+        {hasAuthError ? (
+          <p className="mt-4 text-sm text-red-600">
+            Magic link verification failed. Request a new link and try again.
+          </p>
+        ) : null}
         {message ? <p className="mt-4 text-sm text-slate-700">{message}</p> : null}
       </div>
     </main>
