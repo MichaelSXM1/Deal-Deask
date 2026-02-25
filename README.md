@@ -21,6 +21,8 @@ Set these in `.env.local` and in Vercel Project Settings:
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
+- `TEAM_INVITE_CODE` (required for self-serve account creation)
+- `ALLOWED_SIGNUP_DOMAINS` (optional comma-separated domains, e.g. `cedaracquisitions.com,gmail.com`)
 - `RESEND_API_KEY`
 - `ALERT_FROM_EMAIL` (must be a verified sender/domain in Resend for production)
 - `CRON_SECRET` (random secret; Vercel cron should send this as bearer token)
@@ -77,3 +79,12 @@ Authorization: Bearer <CRON_SECRET>
 
 - Role enforcement is both UI-level and database-level (RLS is final authority).
 - This remains intentionally minimal for speed and zero-cost operation.
+
+## Automated Team Onboarding
+
+- Team members can create accounts directly on the login page using:
+  - Email
+  - Password
+  - Shared `TEAM_INVITE_CODE`
+- New users are auto-created as `acq_manager` by DB trigger logic.
+- Magic links remain available, but password sign-in is the primary path to avoid email rate limits.
