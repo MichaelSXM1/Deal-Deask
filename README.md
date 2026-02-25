@@ -43,6 +43,8 @@ Set these in `.env.local` and in Vercel Project Settings:
    [`supabase/migrations/20260225_add_stacked_strategy.sql`](./supabase/migrations/20260225_add_stacked_strategy.sql)
 8. Then run:
    [`supabase/migrations/20260225_stacked_dashboard.sql`](./supabase/migrations/20260225_stacked_dashboard.sql)
+9. Then run:
+   [`supabase/migrations/20260225_add_notes_columns.sql`](./supabase/migrations/20260225_add_notes_columns.sql)
 
 ## 4) Cron setup (Vercel free)
 
@@ -66,6 +68,7 @@ Authorization: Bearer <CRON_SECRET>
 - Account-based `Assigned Rep` selector (`assigned_rep_user_id`)
 - `buyers_found` as a global Yes toggle button (light/dark, clickable by any logged-in user)
 - `access_type` field (`Lockbox`, `Appointment`, `Open`)
+- Notes field on each standard and stacked deal
 - Stacked board hand-entry fields:
   - Address, Acq Manager, Purchase Price, Net to Buyer, Assignment Fee, Cashflow
 - Stacked board checklist toggles (PSA, Buyer, EMD, Lender, Appraisal, CTC) with one-click updates

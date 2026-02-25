@@ -70,6 +70,7 @@ create table if not exists public.deals (
   access_type public.access_type not null default 'Lockbox',
   dd_deadline date not null,
   title_company text not null,
+  notes text not null default '',
   drive_link text,
   assignment_status public.assignment_status not null default 'Not Assigned',
   assigned_rep_user_id uuid references auth.users (id),
@@ -96,6 +97,7 @@ create table if not exists public.stacked_deals (
   net_to_buyer numeric(12, 2) not null check (net_to_buyer >= 0),
   assignment_fee numeric(12, 2) not null check (assignment_fee >= 0),
   cashflow numeric(12, 2) not null default 0,
+  notes text not null default '',
   psa_signed boolean not null default false,
   buyer_signed boolean not null default false,
   emd_in boolean not null default false,
@@ -115,6 +117,12 @@ add column if not exists buyers_found boolean not null default false;
 
 alter table public.deals
 add column if not exists access_type public.access_type not null default 'Lockbox';
+
+alter table public.deals
+add column if not exists notes text not null default '';
+
+alter table public.stacked_deals
+add column if not exists notes text not null default '';
 
 alter table public.deals
 drop constraint if exists deals_buyers_found_nonnegative;
@@ -283,6 +291,7 @@ begin
     or new.net_to_buyer is distinct from old.net_to_buyer
     or new.assignment_fee is distinct from old.assignment_fee
     or new.cashflow is distinct from old.cashflow
+    or new.notes is distinct from old.notes
   ) then
     raise exception 'Only deal owner or admin can edit stacked deal amounts/details';
   end if;

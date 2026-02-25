@@ -24,6 +24,7 @@ type SortableDealColumn =
   | "access_type"
   | "dd_deadline"
   | "title_company"
+  | "notes"
   | "assignment_status";
 
 interface DashboardTableProps {
@@ -42,6 +43,7 @@ interface DealFormValues {
   access_type: AccessType;
   dd_deadline: string;
   title_company: string;
+  notes: string;
   drive_link: string;
   assignment_status: AssignmentStatus;
   assigned_rep_user_id: string;
@@ -56,6 +58,7 @@ const defaultDealValues: DealFormValues = {
   access_type: "Lockbox",
   dd_deadline: "",
   title_company: "",
+  notes: "",
   drive_link: "",
   assignment_status: "Not Assigned",
   assigned_rep_user_id: ""
@@ -73,6 +76,7 @@ function normalizeDeal(deal: Deal): Deal {
       typeof deal.buyers_found === "boolean"
         ? deal.buyers_found
         : Number(deal.buyers_found) > 0,
+    notes: deal.notes ?? "",
     drive_link: deal.drive_link ?? null,
     assigned_rep_user_id: deal.assigned_rep_user_id ?? null,
     access_type: deal.access_type ?? "Lockbox"
@@ -89,6 +93,7 @@ function toFormValues(deal: Deal): DealFormValues {
     access_type: deal.access_type,
     dd_deadline: deal.dd_deadline,
     title_company: deal.title_company,
+    notes: deal.notes ?? "",
     drive_link: deal.drive_link ?? "",
     assignment_status: deal.assignment_status,
     assigned_rep_user_id: deal.assigned_rep_user_id ?? ""
@@ -208,6 +213,7 @@ export function DashboardTable({
       access_type: values.access_type,
       dd_deadline: values.dd_deadline,
       title_company: values.title_company.trim(),
+      notes: values.notes.trim(),
       drive_link: values.drive_link.trim() || null,
       assignment_status: values.assignment_status,
       assigned_rep_user_id: assignedRepUserId
@@ -267,6 +273,7 @@ export function DashboardTable({
       access_type: values.access_type,
       dd_deadline: values.dd_deadline,
       title_company: values.title_company.trim(),
+      notes: values.notes.trim(),
       drive_link: values.drive_link.trim() || null,
       assignment_status: values.assignment_status,
       assigned_rep_user_id: assignedRepUserId
@@ -390,6 +397,7 @@ export function DashboardTable({
               <HeaderCell label="DD Date" onClick={() => toggleSort("dd_deadline")} />
               <th className="px-2 py-2 text-left font-semibold text-slate-700">DD Left</th>
               <HeaderCell label="Title" onClick={() => toggleSort("title_company")} />
+              <HeaderCell label="Notes" onClick={() => toggleSort("notes")} />
               <HeaderCell label="Assign" onClick={() => toggleSort("assignment_status")} />
               <th className="px-2 py-2 text-left font-semibold text-slate-700">Actions</th>
             </tr>
@@ -398,7 +406,7 @@ export function DashboardTable({
           <tbody className="divide-y divide-slate-100">
             {sortedDeals.length === 0 ? (
               <tr>
-                <td colSpan={13} className="px-4 py-8 text-center text-slate-500">
+                <td colSpan={14} className="px-4 py-8 text-center text-slate-500">
                   No active deals yet.
                 </td>
               </tr>
@@ -467,6 +475,9 @@ export function DashboardTable({
                     </td>
                     <td className="px-2 py-2 text-slate-700" title={deal.title_company}>
                       <span className="break-words">{deal.title_company}</span>
+                    </td>
+                    <td className="px-2 py-2 text-slate-700" title={deal.notes}>
+                      <span className="block truncate">{deal.notes || "-"}</span>
                     </td>
                     <td className="px-2 py-2 text-slate-700">{deal.assignment_status}</td>
                     <td className="px-2 py-2 text-slate-700">
@@ -775,6 +786,16 @@ function DealFormModal({
                 className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-cedar-500 focus:ring-2 focus:ring-cedar-100"
               />
             </Field>
+
+            <Field label="Notes" className="sm:col-span-2 lg:col-span-3">
+              <textarea
+                value={formValues.notes}
+                onChange={(event) => updateValue("notes", event.target.value)}
+                rows={3}
+                placeholder="Internal notes..."
+                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-cedar-500 focus:ring-2 focus:ring-cedar-100"
+              />
+            </Field>
           </div>
 
           {!canManageAssignment ? (
@@ -807,13 +828,15 @@ function DealFormModal({
 
 function Field({
   label,
-  children
+  children,
+  className
 }: {
   label: string;
   children: ReactNode;
+  className?: string;
 }) {
   return (
-    <label className="block space-y-1 text-sm">
+    <label className={cn("block space-y-1 text-sm", className)}>
       <span className="font-medium text-slate-700">{label}</span>
       {children}
     </label>

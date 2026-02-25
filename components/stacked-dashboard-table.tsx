@@ -21,6 +21,7 @@ type SortableStackedColumn =
   | "net_to_buyer"
   | "assignment_fee"
   | "cashflow"
+  | "notes"
   | StageKey;
 
 interface StackedDashboardTableProps {
@@ -36,6 +37,7 @@ interface StackedDealFormValues {
   net_to_buyer: string;
   assignment_fee: string;
   cashflow: string;
+  notes: string;
 }
 
 const defaultStackedValues: StackedDealFormValues = {
@@ -44,7 +46,8 @@ const defaultStackedValues: StackedDealFormValues = {
   purchase_price: "",
   net_to_buyer: "",
   assignment_fee: "",
-  cashflow: ""
+  cashflow: "",
+  notes: ""
 };
 
 const stageColumns: Array<{ key: StageKey; label: string }> = [
@@ -68,6 +71,7 @@ function normalizeStackedDeal(deal: StackedDeal): StackedDeal {
     net_to_buyer: Number.isFinite(netToBuyer) ? netToBuyer : 0,
     assignment_fee: Number.isFinite(assignmentFee) ? assignmentFee : 0,
     cashflow: Number.isFinite(cashflow) ? cashflow : 0,
+    notes: deal.notes ?? "",
     psa_signed: Boolean(deal.psa_signed),
     buyer_signed: Boolean(deal.buyer_signed),
     emd_in: Boolean(deal.emd_in),
@@ -84,7 +88,8 @@ function toFormValues(deal: StackedDeal): StackedDealFormValues {
     purchase_price: String(deal.purchase_price),
     net_to_buyer: String(deal.net_to_buyer),
     assignment_fee: String(deal.assignment_fee),
-    cashflow: String(deal.cashflow)
+    cashflow: String(deal.cashflow),
+    notes: deal.notes ?? ""
   };
 }
 
@@ -174,7 +179,8 @@ export function StackedDashboardTable({
       purchase_price: purchasePrice,
       net_to_buyer: netToBuyer,
       assignment_fee: assignmentFee,
-      cashflow
+      cashflow,
+      notes: values.notes.trim()
     };
 
     const { data, error } = await supabase
@@ -226,7 +232,8 @@ export function StackedDashboardTable({
       purchase_price: purchasePrice,
       net_to_buyer: netToBuyer,
       assignment_fee: assignmentFee,
-      cashflow
+      cashflow,
+      notes: values.notes.trim()
     };
 
     const { data, error } = await supabase
@@ -346,6 +353,7 @@ export function StackedDashboardTable({
               <HeaderCell label="Net Buyer" onClick={() => toggleSort("net_to_buyer")} />
               <HeaderCell label="Fee" onClick={() => toggleSort("assignment_fee")} />
               <HeaderCell label="Cashflow" onClick={() => toggleSort("cashflow")} />
+              <HeaderCell label="Notes" onClick={() => toggleSort("notes")} />
               {stageColumns.map((stage) => (
                 <HeaderCell
                   key={stage.key}
@@ -360,7 +368,7 @@ export function StackedDashboardTable({
           <tbody className="divide-y divide-slate-100">
             {sortedDeals.length === 0 ? (
               <tr>
-                <td colSpan={13} className="px-4 py-8 text-center text-slate-500">
+                <td colSpan={14} className="px-4 py-8 text-center text-slate-500">
                   No stacked deals yet.
                 </td>
               </tr>
@@ -385,6 +393,9 @@ export function StackedDashboardTable({
                       {formatCurrency(deal.assignment_fee)}
                     </td>
                     <td className="px-2 py-2 text-slate-700">{formatCurrency(deal.cashflow)}</td>
+                    <td className="px-2 py-2 text-slate-700" title={deal.notes}>
+                      <span className="block truncate">{deal.notes || "-"}</span>
+                    </td>
                     {stageColumns.map((stage) => {
                       const value = deal[stage.key];
                       const stageLoading = togglingStage === `${deal.id}:${stage.key}`;
@@ -619,6 +630,16 @@ function StackedDealFormModal({
                 className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-cedar-500 focus:ring-2 focus:ring-cedar-100"
               />
             </Field>
+
+            <Field label="Notes" className="sm:col-span-2 lg:col-span-3">
+              <textarea
+                value={formValues.notes}
+                onChange={(event) => updateValue("notes", event.target.value)}
+                rows={3}
+                placeholder="Internal notes..."
+                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-cedar-500 focus:ring-2 focus:ring-cedar-100"
+              />
+            </Field>
           </div>
 
           <div className="flex items-center justify-end gap-2 border-t border-slate-200 pt-4">
@@ -645,13 +666,15 @@ function StackedDealFormModal({
 
 function Field({
   label,
-  children
+  children,
+  className
 }: {
   label: string;
   children: ReactNode;
+  className?: string;
 }) {
   return (
-    <label className="block space-y-1 text-sm">
+    <label className={cn("block space-y-1 text-sm", className)}>
       <span className="font-medium text-slate-700">{label}</span>
       {children}
     </label>

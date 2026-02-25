@@ -23,6 +23,7 @@ export interface Deal {
   access_type: AccessType;
   dd_deadline: string;
   title_company: string;
+  notes: string;
   drive_link: string | null;
   assignment_status: AssignmentStatus;
   assigned_rep_user_id: string | null;
@@ -39,6 +40,7 @@ export interface StackedDeal {
   net_to_buyer: number;
   assignment_fee: number;
   cashflow: number;
+  notes: string;
   psa_signed: boolean;
   buyer_signed: boolean;
   emd_in: boolean;

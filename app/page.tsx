@@ -73,9 +73,6 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       <header className="flex flex-col gap-2">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <p className="text-sm font-medium uppercase tracking-wide text-cedar-700">
-              Cedar Acquisitions
-            </p>
             <h1 className="text-3xl font-semibold tracking-tight text-slate-900">
               {board === "standard" ? "Active Deals" : "Stacked Deals"}
             </h1>

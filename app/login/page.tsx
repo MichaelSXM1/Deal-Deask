@@ -135,10 +135,7 @@ export default function LoginPage() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-slate-100 px-4">
       <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <p className="text-xs font-semibold uppercase tracking-wide text-cedar-700">
-          Cedar Acquisitions
-        </p>
-        <h1 className="mt-2 text-2xl font-semibold text-slate-900">Sign in</h1>
+        <h1 className="text-2xl font-semibold text-slate-900">Sign in</h1>
         <p className="mt-1 text-sm text-slate-600">
           Sign in with password. Magic links are optional and can hit provider limits.
         </p>
