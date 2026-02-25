@@ -31,7 +31,12 @@ export default async function StackedDashboardPage() {
     .select("*")
     .order("created_at", { ascending: false });
 
-  if (error) {
+  const stackedTableMissing =
+    error?.code === "PGRST205" ||
+    error?.code === "42P01" ||
+    error?.message.toLowerCase().includes("stacked_deals") === true;
+
+  if (error && !stackedTableMissing) {
     throw new Error(`Failed to load stacked deals: ${error.message}`);
   }
 
@@ -62,11 +67,18 @@ export default async function StackedDashboardPage() {
         </div>
       </header>
 
-      <StackedDashboardTable
-        deals={(stackedDeals as StackedDeal[]) ?? []}
-        currentUserId={user.id}
-        role={role}
-      />
+      {stackedTableMissing ? (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+          Run `supabase/migrations/20260225_stacked_dashboard.sql` in your Supabase SQL
+          Editor, then refresh this page.
+        </div>
+      ) : (
+        <StackedDashboardTable
+          deals={(stackedDeals as StackedDeal[]) ?? []}
+          currentUserId={user.id}
+          role={role}
+        />
+      )}
     </main>
   );
 }
