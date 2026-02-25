@@ -56,7 +56,7 @@ Authorization: Bearer <CRON_SECRET>
 ## 5) What is implemented
 
 - Global sortable single-table dashboard (`/`)
-- Dedicated stacked dashboard (`/stacked`) with a separate table
+- Dedicated stacked board via main dashboard toggle (`/?board=stacked`)
 - Full-width compact table layout (no left-right scrolling on desktop)
 - `DD Days Left` urgency badge (red at <= 48 hours)
 - Add/Edit deal modal forms wired to Supabase

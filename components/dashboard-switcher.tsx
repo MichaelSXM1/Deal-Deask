@@ -9,7 +9,7 @@ export function DashboardSwitcher({
   return (
     <div className="inline-flex rounded-lg border border-slate-200 bg-white p-1">
       <Link
-        href="/"
+        href="/?board=standard"
         className={cn(
           "rounded-md px-3 py-1.5 text-xs font-semibold",
           active === "standard"
@@ -20,7 +20,7 @@ export function DashboardSwitcher({
         Standard Deals
       </Link>
       <Link
-        href="/stacked"
+        href="/?board=stacked"
         className={cn(
           "rounded-md px-3 py-1.5 text-xs font-semibold",
           active === "stacked"
