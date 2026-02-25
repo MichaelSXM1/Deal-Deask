@@ -412,7 +412,7 @@ export function DashboardTable({
                   role === "admin" ||
                   deal.created_by === currentUserId ||
                   deal.assigned_rep_user_id === currentUserId;
-                const canDelete = role === "admin";
+                const canDelete = true;
                 const assignedRepLabel = deal.assigned_rep_user_id
                   ? assignableLabelById.get(deal.assigned_rep_user_id) ?? "Unknown"
                   : "-";

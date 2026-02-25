@@ -366,7 +366,7 @@ export function StackedDashboardTable({
             ) : (
               sortedDeals.map((deal) => {
                 const canEdit = role === "admin" || deal.created_by === currentUserId;
-                const canDelete = role === "admin";
+                const canDelete = true;
 
                 return (
                   <tr key={deal.id} className="hover:bg-slate-50">

@@ -164,11 +164,12 @@ using (public.is_admin(auth.uid()) or created_by = auth.uid())
 with check (public.is_admin(auth.uid()) or created_by = auth.uid());
 
 drop policy if exists "stacked_deals_delete_admin_only" on public.stacked_deals;
-create policy "stacked_deals_delete_admin_only"
+drop policy if exists "stacked_deals_delete_authenticated" on public.stacked_deals;
+create policy "stacked_deals_delete_authenticated"
 on public.stacked_deals
 for delete
 to authenticated
-using (public.is_admin(auth.uid()));
+using (true);
 
 grant select, insert, update, delete on public.stacked_deals to authenticated;
 revoke all on function public.set_stacked_stage(uuid, text, boolean) from public;

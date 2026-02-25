@@ -60,7 +60,7 @@ Authorization: Bearer <CRON_SECRET>
 - Full-width compact table layout (no left-right scrolling on desktop)
 - `DD Days Left` urgency badge (red at <= 48 hours)
 - Add/Edit deal modal forms wired to Supabase
-- Delete action wired to Supabase (admin only)
+- Delete action wired to Supabase (any logged-in user)
 - Account-based `Assigned Rep` selector (`assigned_rep_user_id`)
 - `buyers_found` as a global Yes toggle button (light/dark, clickable by any logged-in user)
 - `access_type` field (`Lockbox`, `Appointment`, `Open`)

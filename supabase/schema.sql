@@ -441,13 +441,14 @@ with check (
   or assigned_rep_user_id = auth.uid()
 );
 
--- Only admins can delete deals.
+-- Any authenticated user can delete deals.
 drop policy if exists "deals_delete_admin_only" on public.deals;
-create policy "deals_delete_admin_only"
+drop policy if exists "deals_delete_authenticated" on public.deals;
+create policy "deals_delete_authenticated"
 on public.deals
 for delete
 to authenticated
-using (public.is_admin(auth.uid()));
+using (true);
 
 drop policy if exists "stacked_deals_select_authenticated" on public.stacked_deals;
 create policy "stacked_deals_select_authenticated"
@@ -472,11 +473,12 @@ using (public.is_admin(auth.uid()) or created_by = auth.uid())
 with check (public.is_admin(auth.uid()) or created_by = auth.uid());
 
 drop policy if exists "stacked_deals_delete_admin_only" on public.stacked_deals;
-create policy "stacked_deals_delete_admin_only"
+drop policy if exists "stacked_deals_delete_authenticated" on public.stacked_deals;
+create policy "stacked_deals_delete_authenticated"
 on public.stacked_deals
 for delete
 to authenticated
-using (public.is_admin(auth.uid()));
+using (true);
 
 -- Users can read their own role row so the app can render role-aware UI.
 drop policy if exists "roles_select_own" on public.user_roles;
