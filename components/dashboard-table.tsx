@@ -4,6 +4,7 @@ import { type FormEvent, type ReactNode, useEffect, useMemo, useState } from "re
 import { ArrowUpDown, Pencil, Plus, Trash2, X } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import type {
+  AccessType,
   AppRole,
   AssignableUser,
   AssignmentStatus,
@@ -19,9 +20,10 @@ type SortableDealColumn =
   | "deal_strategy"
   | "contract_price"
   | "marketing_price"
+  | "buyers_found"
+  | "access_type"
   | "dd_deadline"
   | "title_company"
-  | "drive_link"
   | "assignment_status";
 
 interface DashboardTableProps {
@@ -37,6 +39,8 @@ interface DealFormValues {
   deal_strategy: DealStrategy;
   contract_price: string;
   marketing_price: string;
+  buyers_found: string;
+  access_type: AccessType;
   dd_deadline: string;
   title_company: string;
   drive_link: string;
@@ -50,6 +54,8 @@ const defaultDealValues: DealFormValues = {
   deal_strategy: "Cash",
   contract_price: "",
   marketing_price: "",
+  buyers_found: "0",
+  access_type: "Lockbox",
   dd_deadline: "",
   title_company: "",
   drive_link: "",
@@ -60,13 +66,16 @@ const defaultDealValues: DealFormValues = {
 function normalizeDeal(deal: Deal): Deal {
   const contractPrice = Number(deal.contract_price);
   const marketingPrice = Number(deal.marketing_price);
+  const buyersFound = Number(deal.buyers_found);
 
   return {
     ...deal,
     contract_price: Number.isFinite(contractPrice) ? contractPrice : 0,
     marketing_price: Number.isFinite(marketingPrice) ? marketingPrice : 0,
+    buyers_found: Number.isFinite(buyersFound) ? buyersFound : 0,
     drive_link: deal.drive_link ?? null,
-    assigned_rep_user_id: deal.assigned_rep_user_id ?? null
+    assigned_rep_user_id: deal.assigned_rep_user_id ?? null,
+    access_type: deal.access_type ?? "Lockbox"
   };
 }
 
@@ -77,6 +86,8 @@ function toFormValues(deal: Deal): DealFormValues {
     deal_strategy: deal.deal_strategy,
     contract_price: String(deal.contract_price),
     marketing_price: String(deal.marketing_price),
+    buyers_found: String(deal.buyers_found),
+    access_type: deal.access_type,
     dd_deadline: deal.dd_deadline,
     title_company: deal.title_company,
     drive_link: deal.drive_link ?? "",
@@ -86,6 +97,14 @@ function toFormValues(deal: Deal): DealFormValues {
 }
 
 function getAssignableLabel(user: AssignableUser) {
+  const name = user.first_name?.trim();
+  if (name) {
+    return name;
+  }
+  return user.email.split("@")[0] ?? user.email;
+}
+
+function getAssignableOptionLabel(user: AssignableUser) {
   const name = user.first_name?.trim();
   return name ? `${name} (${user.email})` : user.email;
 }
@@ -131,7 +150,11 @@ export function DashboardTable({
 
   const sortedDeals = useMemo(() => {
     const sorted = [...rows].sort((a, b) => {
-      if (sortBy === "contract_price" || sortBy === "marketing_price") {
+      if (
+        sortBy === "contract_price" ||
+        sortBy === "marketing_price" ||
+        sortBy === "buyers_found"
+      ) {
         return Number(a[sortBy]) - Number(b[sortBy]);
       }
 
@@ -159,6 +182,7 @@ export function DashboardTable({
 
     const contractPrice = Number(values.contract_price);
     const marketingPrice = Number(values.marketing_price);
+    const buyersFound = Number(values.buyers_found);
     const assignedRepUserId =
       values.assignment_status === "Assigned"
         ? values.assigned_rep_user_id || null
@@ -166,6 +190,11 @@ export function DashboardTable({
 
     if (!Number.isFinite(contractPrice) || !Number.isFinite(marketingPrice)) {
       setErrorMessage("Contract and marketing price must be valid numbers.");
+      return;
+    }
+
+    if (!Number.isInteger(buyersFound) || buyersFound < 0) {
+      setErrorMessage("Buyers found must be a whole number >= 0.");
       return;
     }
 
@@ -182,6 +211,8 @@ export function DashboardTable({
       deal_strategy: values.deal_strategy,
       contract_price: contractPrice,
       marketing_price: marketingPrice,
+      buyers_found: buyersFound,
+      access_type: values.access_type,
       dd_deadline: values.dd_deadline,
       title_company: values.title_company.trim(),
       drive_link: values.drive_link.trim() || null,
@@ -217,6 +248,7 @@ export function DashboardTable({
 
     const contractPrice = Number(values.contract_price);
     const marketingPrice = Number(values.marketing_price);
+    const buyersFound = Number(values.buyers_found);
     const assignedRepUserId =
       values.assignment_status === "Assigned"
         ? values.assigned_rep_user_id || null
@@ -224,6 +256,11 @@ export function DashboardTable({
 
     if (!Number.isFinite(contractPrice) || !Number.isFinite(marketingPrice)) {
       setErrorMessage("Contract and marketing price must be valid numbers.");
+      return;
+    }
+
+    if (!Number.isInteger(buyersFound) || buyersFound < 0) {
+      setErrorMessage("Buyers found must be a whole number >= 0.");
       return;
     }
 
@@ -240,6 +277,8 @@ export function DashboardTable({
       deal_strategy: values.deal_strategy,
       contract_price: contractPrice,
       marketing_price: marketingPrice,
+      buyers_found: buyersFound,
+      access_type: values.access_type,
       dd_deadline: values.dd_deadline,
       title_company: values.title_company.trim(),
       drive_link: values.drive_link.trim() || null,
@@ -326,183 +365,130 @@ export function DashboardTable({
           </div>
         )}
 
-        <div className="table-scrollbar overflow-x-auto">
-          <table className="min-w-full divide-y divide-slate-200 text-sm">
-            <thead className="bg-slate-50">
+        <table className="w-full table-fixed divide-y divide-slate-200 text-xs">
+          <thead className="bg-slate-50">
+            <tr>
+              <HeaderCell label="Address" onClick={() => toggleSort("address")} />
+              <HeaderCell label="Rep" onClick={() => toggleSort("acq_manager_first_name")} />
+              <HeaderCell label="Assigned" onClick={() => toggleSort("assigned_rep_user_id")} />
+              <HeaderCell label="Strategy" onClick={() => toggleSort("deal_strategy")} />
+              <HeaderCell label="Contract" onClick={() => toggleSort("contract_price")} />
+              <HeaderCell label="Marketing" onClick={() => toggleSort("marketing_price")} />
+              <HeaderCell label="Buyers" onClick={() => toggleSort("buyers_found")} />
+              <HeaderCell label="Access" onClick={() => toggleSort("access_type")} />
+              <HeaderCell label="DD Date" onClick={() => toggleSort("dd_deadline")} />
+              <th className="px-2 py-2 text-left font-semibold text-slate-700">DD Left</th>
+              <HeaderCell label="Title" onClick={() => toggleSort("title_company")} />
+              <HeaderCell label="Assign" onClick={() => toggleSort("assignment_status")} />
+              <th className="px-2 py-2 text-left font-semibold text-slate-700">Actions</th>
+            </tr>
+          </thead>
+
+          <tbody className="divide-y divide-slate-100">
+            {sortedDeals.length === 0 ? (
               <tr>
-                <HeaderCell label="Address" onClick={() => toggleSort("address")} />
-                <HeaderCell
-                  label="Rep"
-                  onClick={() => toggleSort("acq_manager_first_name")}
-                />
-                <HeaderCell
-                  label="Assigned Rep"
-                  onClick={() => toggleSort("assigned_rep_user_id")}
-                />
-                <HeaderCell
-                  label="Strategy"
-                  onClick={() => toggleSort("deal_strategy")}
-                />
-                <HeaderCell
-                  label="Contract"
-                  onClick={() => toggleSort("contract_price")}
-                />
-                <HeaderCell
-                  label="Marketing"
-                  onClick={() => toggleSort("marketing_price")}
-                />
-                <HeaderCell
-                  label="DD Deadline"
-                  onClick={() => toggleSort("dd_deadline")}
-                />
-                <th className="whitespace-nowrap px-4 py-3 text-left font-semibold text-slate-700">
-                  DD Days Left
-                </th>
-                <HeaderCell
-                  label="Title Company"
-                  onClick={() => toggleSort("title_company")}
-                />
-                <HeaderCell label="Drive" onClick={() => toggleSort("drive_link")} />
-                <HeaderCell
-                  label="Assignment"
-                  onClick={() => toggleSort("assignment_status")}
-                />
-                <th className="whitespace-nowrap px-4 py-3 text-left font-semibold text-slate-700">
-                  Actions
-                </th>
+                <td colSpan={13} className="px-4 py-8 text-center text-slate-500">
+                  No active deals yet.
+                </td>
               </tr>
-            </thead>
+            ) : (
+              sortedDeals.map((deal) => {
+                const hoursLeft = getHoursLeft(deal.dd_deadline);
+                const urgent = hoursLeft <= 48;
+                const overdue = hoursLeft < 0;
+                const daysLeft = Math.ceil(hoursLeft / 24);
+                const canEdit =
+                  role === "admin" ||
+                  deal.created_by === currentUserId ||
+                  deal.assigned_rep_user_id === currentUserId;
+                const canDelete = role === "admin";
+                const assignedRepLabel = deal.assigned_rep_user_id
+                  ? assignableLabelById.get(deal.assigned_rep_user_id) ?? "Unknown"
+                  : "-";
 
-            <tbody className="divide-y divide-slate-100">
-              {sortedDeals.length === 0 ? (
-                <tr>
-                  <td colSpan={12} className="px-4 py-8 text-center text-slate-500">
-                    No active deals yet.
-                  </td>
-                </tr>
-              ) : (
-                sortedDeals.map((deal) => {
-                  const hoursLeft = getHoursLeft(deal.dd_deadline);
-                  const urgent = hoursLeft <= 48;
-                  const overdue = hoursLeft < 0;
-                  const daysLeft = Math.ceil(hoursLeft / 24);
-                  const canEdit =
-                    role === "admin" ||
-                    deal.created_by === currentUserId ||
-                    deal.assigned_rep_user_id === currentUserId;
-                  const canDelete = role === "admin";
-                  const assignedRepLabel = deal.assigned_rep_user_id
-                    ? assignableLabelById.get(deal.assigned_rep_user_id) ?? "Unknown User"
-                    : "-";
-
-                  return (
-                    <tr key={deal.id} className="hover:bg-slate-50">
-                      <td className="whitespace-nowrap px-4 py-3 font-medium text-slate-900">
-                        {deal.address}
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-slate-700">
-                        {deal.acq_manager_first_name}
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-slate-700">
-                        {assignedRepLabel}
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-slate-700">
-                        {deal.deal_strategy}
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-slate-700">
-                        {formatCurrency(deal.contract_price)}
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-slate-700">
-                        {formatCurrency(deal.marketing_price)}
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-slate-700">
-                        {deal.dd_deadline}
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3">
-                        <span
+                return (
+                  <tr key={deal.id} className="hover:bg-slate-50">
+                    <td className="px-2 py-2 font-medium text-slate-900" title={deal.address}>
+                      <span className="break-words">{deal.address}</span>
+                    </td>
+                    <td className="px-2 py-2 text-slate-700">{deal.acq_manager_first_name}</td>
+                    <td className="px-2 py-2 text-slate-700" title={assignedRepLabel}>
+                      <span className="break-words">{assignedRepLabel}</span>
+                    </td>
+                    <td className="px-2 py-2 text-slate-700">{deal.deal_strategy}</td>
+                    <td className="px-2 py-2 text-slate-700">{formatCurrency(deal.contract_price)}</td>
+                    <td className="px-2 py-2 text-slate-700">{formatCurrency(deal.marketing_price)}</td>
+                    <td className="px-2 py-2 text-slate-700">{deal.buyers_found}</td>
+                    <td className="px-2 py-2 text-slate-700">{deal.access_type}</td>
+                    <td className="px-2 py-2 text-slate-700">{deal.dd_deadline}</td>
+                    <td className="px-2 py-2">
+                      <span
+                        className={cn(
+                          "inline-flex rounded-full px-2 py-0.5 text-xs font-semibold",
+                          urgent
+                            ? "bg-red-100 text-red-700"
+                            : "bg-emerald-100 text-emerald-700"
+                        )}
+                      >
+                        {overdue
+                          ? Math.abs(hoursLeft) < 24
+                            ? `${Math.abs(hoursLeft)}h overdue`
+                            : `${Math.ceil(Math.abs(hoursLeft) / 24)}d overdue`
+                          : urgent
+                            ? `${hoursLeft}h`
+                            : `${daysLeft}d`}
+                      </span>
+                    </td>
+                    <td className="px-2 py-2 text-slate-700" title={deal.title_company}>
+                      <span className="break-words">{deal.title_company}</span>
+                    </td>
+                    <td className="px-2 py-2 text-slate-700">{deal.assignment_status}</td>
+                    <td className="px-2 py-2 text-slate-700">
+                      <div className="flex flex-wrap items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!canEdit) {
+                              return;
+                            }
+                            setErrorMessage(null);
+                            setSuccessMessage(null);
+                            setEditingDeal(deal);
+                          }}
+                          disabled={!canEdit}
                           className={cn(
-                            "inline-flex rounded-full px-2.5 py-1 text-xs font-semibold",
-                            urgent
-                              ? "bg-red-100 text-red-700"
-                              : "bg-emerald-100 text-emerald-700"
+                            "inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-semibold",
+                            canEdit
+                              ? "border-cedar-500 text-cedar-700"
+                              : "cursor-not-allowed border-slate-200 text-slate-400"
                           )}
                         >
-                          {overdue
-                            ? Math.abs(hoursLeft) < 24
-                              ? `${Math.abs(hoursLeft)}h overdue`
-                              : `${Math.ceil(Math.abs(hoursLeft) / 24)} days overdue`
-                            : urgent
-                              ? `${hoursLeft}h`
-                              : `${daysLeft} days`}
-                        </span>
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-slate-700">
-                        {deal.title_company}
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-slate-700">
-                        {deal.drive_link ? (
-                          <a
-                            href={deal.drive_link}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-cedar-700 underline decoration-slate-300 underline-offset-2"
-                          >
-                            Open
-                          </a>
-                        ) : (
-                          "-"
-                        )}
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-slate-700">
-                        {deal.assignment_status}
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-slate-700">
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (!canEdit) {
-                                return;
-                              }
-                              setErrorMessage(null);
-                              setSuccessMessage(null);
-                              setEditingDeal(deal);
-                            }}
-                            disabled={!canEdit}
-                            className={cn(
-                              "inline-flex items-center gap-1 rounded-md border px-2.5 py-1 text-xs font-semibold",
-                              canEdit
-                                ? "border-cedar-500 text-cedar-700"
-                                : "cursor-not-allowed border-slate-200 text-slate-400"
-                            )}
-                          >
-                            <Pencil className="h-3 w-3" />
-                            Edit
-                          </button>
+                          <Pencil className="h-3 w-3" />
+                          Edit
+                        </button>
 
-                          <button
-                            type="button"
-                            onClick={() => void handleDelete(deal)}
-                            disabled={!canDelete || deletingId === deal.id}
-                            className={cn(
-                              "inline-flex items-center gap-1 rounded-md border px-2.5 py-1 text-xs font-semibold",
-                              canDelete
-                                ? "border-red-300 text-red-700"
-                                : "cursor-not-allowed border-slate-200 text-slate-400"
-                            )}
-                          >
-                            <Trash2 className="h-3 w-3" />
-                            {deletingId === deal.id ? "Deleting..." : "Delete"}
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+                        <button
+                          type="button"
+                          onClick={() => void handleDelete(deal)}
+                          disabled={!canDelete || deletingId === deal.id}
+                          className={cn(
+                            "inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-semibold",
+                            canDelete
+                              ? "border-red-300 text-red-700"
+                              : "cursor-not-allowed border-slate-200 text-slate-400"
+                          )}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                          {deletingId === deal.id ? "..." : "Del"}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
       </div>
 
       <DealFormModal
@@ -537,14 +523,14 @@ export function DashboardTable({
 
 function HeaderCell({ label, onClick }: { label: string; onClick: () => void }) {
   return (
-    <th className="px-4 py-3 text-left font-semibold text-slate-700">
+    <th className="px-2 py-2 text-left font-semibold text-slate-700">
       <button
         type="button"
         onClick={onClick}
-        className="inline-flex items-center gap-1 whitespace-nowrap hover:text-slate-900"
+        className="inline-flex items-center gap-1 hover:text-slate-900"
       >
         {label}
-        <ArrowUpDown className="h-3.5 w-3.5" />
+        <ArrowUpDown className="h-3 w-3" />
       </button>
     </th>
   );
@@ -616,7 +602,7 @@ function DealFormModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
-      <div className="w-full max-w-2xl rounded-xl bg-white shadow-xl">
+      <div className="w-full max-w-3xl rounded-xl bg-white shadow-xl">
         <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
           <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
           <button
@@ -629,7 +615,7 @@ function DealFormModal({
         </div>
 
         <form onSubmit={submit} className="space-y-4 px-5 py-4">
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <Field label="Address">
               <input
                 required
@@ -665,16 +651,6 @@ function DealFormModal({
               </select>
             </Field>
 
-            <Field label="DD Deadline">
-              <input
-                required
-                type="date"
-                value={formValues.dd_deadline}
-                onChange={(event) => updateValue("dd_deadline", event.target.value)}
-                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-cedar-500 focus:ring-2 focus:ring-cedar-100"
-              />
-            </Field>
-
             <Field label="Contract Price">
               <input
                 required
@@ -695,6 +671,43 @@ function DealFormModal({
                 step="0.01"
                 value={formValues.marketing_price}
                 onChange={(event) => updateValue("marketing_price", event.target.value)}
+                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-cedar-500 focus:ring-2 focus:ring-cedar-100"
+              />
+            </Field>
+
+            <Field label="Buyers Found">
+              <input
+                required
+                type="number"
+                min="0"
+                step="1"
+                value={formValues.buyers_found}
+                onChange={(event) => updateValue("buyers_found", event.target.value)}
+                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-cedar-500 focus:ring-2 focus:ring-cedar-100"
+              />
+            </Field>
+
+            <Field label="Access Type">
+              <select
+                required
+                value={formValues.access_type}
+                onChange={(event) =>
+                  updateValue("access_type", event.target.value as AccessType)
+                }
+                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-cedar-500 focus:ring-2 focus:ring-cedar-100"
+              >
+                <option value="Lockbox">Lockbox</option>
+                <option value="Appointment">Appointment</option>
+                <option value="Open">Open</option>
+              </select>
+            </Field>
+
+            <Field label="DD Deadline">
+              <input
+                required
+                type="date"
+                value={formValues.dd_deadline}
+                onChange={(event) => updateValue("dd_deadline", event.target.value)}
                 className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-cedar-500 focus:ring-2 focus:ring-cedar-100"
               />
             </Field>
@@ -733,10 +746,20 @@ function DealFormModal({
                 <option value="">None</option>
                 {assignableUsers.map((user) => (
                   <option key={user.user_id} value={user.user_id}>
-                    {getAssignableLabel(user)}
+                    {getAssignableOptionLabel(user)}
                   </option>
                 ))}
               </select>
+            </Field>
+
+            <Field label="Google Drive Link">
+              <input
+                type="url"
+                value={formValues.drive_link}
+                onChange={(event) => updateValue("drive_link", event.target.value)}
+                placeholder="https://drive.google.com/..."
+                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-cedar-500 focus:ring-2 focus:ring-cedar-100"
+              />
             </Field>
           </div>
 
@@ -745,16 +768,6 @@ function DealFormModal({
               Only the deal creator or an admin can change assignment fields.
             </p>
           ) : null}
-
-          <Field label="Google Drive Link">
-            <input
-              type="url"
-              value={formValues.drive_link}
-              onChange={(event) => updateValue("drive_link", event.target.value)}
-              placeholder="https://drive.google.com/..."
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-cedar-500 focus:ring-2 focus:ring-cedar-100"
-            />
-          </Field>
 
           <div className="flex items-center justify-end gap-2 border-t border-slate-200 pt-4">
             <button

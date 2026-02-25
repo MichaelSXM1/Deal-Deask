@@ -26,6 +26,16 @@ $$;
 do $$
 begin
   if not exists (
+    select 1 from pg_type where typname = 'access_type' and typnamespace = 'public'::regnamespace
+  ) then
+    create type public.access_type as enum ('Lockbox', 'Appointment', 'Open');
+  end if;
+end
+$$;
+
+do $$
+begin
+  if not exists (
     select 1 from pg_type where typname = 'app_role' and typnamespace = 'public'::regnamespace
   ) then
     create type public.app_role as enum ('admin', 'acq_manager');
@@ -54,6 +64,8 @@ create table if not exists public.deals (
   deal_strategy public.deal_strategy not null,
   contract_price numeric(12, 2) not null check (contract_price >= 0),
   marketing_price numeric(12, 2) not null check (marketing_price >= 0),
+  buyers_found integer not null default 0,
+  access_type public.access_type not null default 'Lockbox',
   dd_deadline date not null,
   title_company text not null,
   drive_link text,
@@ -76,6 +88,18 @@ create table if not exists public.deals (
 
 alter table public.deals
 add column if not exists assigned_rep_user_id uuid references auth.users (id);
+
+alter table public.deals
+add column if not exists buyers_found integer not null default 0;
+
+alter table public.deals
+add column if not exists access_type public.access_type not null default 'Lockbox';
+
+alter table public.deals
+drop constraint if exists deals_buyers_found_nonnegative;
+
+alter table public.deals
+add constraint deals_buyers_found_nonnegative check (buyers_found >= 0);
 
 update public.deals
 set assigned_rep_user_id = created_by

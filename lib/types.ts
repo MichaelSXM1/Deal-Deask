@@ -2,6 +2,8 @@ export type DealStrategy = "Cash" | "Seller Finance" | "Subto";
 
 export type AssignmentStatus = "Not Assigned" | "Assigned";
 
+export type AccessType = "Lockbox" | "Appointment" | "Open";
+
 export type AppRole = "admin" | "acq_manager";
 
 export interface AssignableUser {
@@ -17,6 +19,8 @@ export interface Deal {
   deal_strategy: DealStrategy;
   contract_price: number;
   marketing_price: number;
+  buyers_found: number;
+  access_type: AccessType;
   dd_deadline: string;
   title_company: string;
   drive_link: string | null;

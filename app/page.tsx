@@ -41,7 +41,7 @@ export default async function DashboardPage() {
     .order("first_name", { ascending: true });
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-7xl flex-col gap-4 px-4 py-8 sm:px-6 lg:px-8">
+    <main className="mx-auto flex min-h-screen w-full max-w-none flex-col gap-4 px-3 py-6 sm:px-4 lg:px-6">
       <header className="flex flex-col gap-2">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>

@@ -33,6 +33,8 @@ Set these in `.env.local` and in Vercel Project Settings:
 3. Ensure Michael and Nico are marked `admin` in `public.user_roles`.
 4. If your database was created from an older version of this repo, also run:
    [`supabase/migrations/20260224_assigned_rep_and_profiles.sql`](./supabase/migrations/20260224_assigned_rep_and_profiles.sql)
+5. Then run:
+   [`supabase/migrations/20260225_buyers_access_columns.sql`](./supabase/migrations/20260225_buyers_access_columns.sql)
 
 ## 4) Cron setup (Vercel free)
 
@@ -48,10 +50,13 @@ Authorization: Bearer <CRON_SECRET>
 ## 5) What is implemented
 
 - Global sortable single-table dashboard (`/`)
+- Full-width compact table layout (no left-right scrolling on desktop)
 - `DD Days Left` urgency badge (red at <= 48 hours)
 - Add/Edit deal modal forms wired to Supabase
 - Delete action wired to Supabase (admin only)
 - Account-based `Assigned Rep` selector (`assigned_rep_user_id`)
+- `buyers_found` field
+- `access_type` field (`Lockbox`, `Appointment`, `Open`)
 - Supabase RLS for role-aware edit/delete logic (admin or creator/assigned-rep updates)
 - DB trigger hardening to keep `created_by` immutable and restrict assignment changes to creator/admin
 - Daily cron route that emails:
