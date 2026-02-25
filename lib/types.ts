@@ -19,7 +19,7 @@ export interface Deal {
   deal_strategy: DealStrategy;
   contract_price: number;
   marketing_price: number;
-  buyers_found: number;
+  buyers_found: boolean;
   access_type: AccessType;
   dd_deadline: string;
   title_company: string;

@@ -39,7 +39,6 @@ interface DealFormValues {
   deal_strategy: DealStrategy;
   contract_price: string;
   marketing_price: string;
-  buyers_found: string;
   access_type: AccessType;
   dd_deadline: string;
   title_company: string;
@@ -54,7 +53,6 @@ const defaultDealValues: DealFormValues = {
   deal_strategy: "Cash",
   contract_price: "",
   marketing_price: "",
-  buyers_found: "0",
   access_type: "Lockbox",
   dd_deadline: "",
   title_company: "",
@@ -66,13 +64,15 @@ const defaultDealValues: DealFormValues = {
 function normalizeDeal(deal: Deal): Deal {
   const contractPrice = Number(deal.contract_price);
   const marketingPrice = Number(deal.marketing_price);
-  const buyersFound = Number(deal.buyers_found);
 
   return {
     ...deal,
     contract_price: Number.isFinite(contractPrice) ? contractPrice : 0,
     marketing_price: Number.isFinite(marketingPrice) ? marketingPrice : 0,
-    buyers_found: Number.isFinite(buyersFound) ? buyersFound : 0,
+    buyers_found:
+      typeof deal.buyers_found === "boolean"
+        ? deal.buyers_found
+        : Number(deal.buyers_found) > 0,
     drive_link: deal.drive_link ?? null,
     assigned_rep_user_id: deal.assigned_rep_user_id ?? null,
     access_type: deal.access_type ?? "Lockbox"
@@ -86,7 +86,6 @@ function toFormValues(deal: Deal): DealFormValues {
     deal_strategy: deal.deal_strategy,
     contract_price: String(deal.contract_price),
     marketing_price: String(deal.marketing_price),
-    buyers_found: String(deal.buyers_found),
     access_type: deal.access_type,
     dd_deadline: deal.dd_deadline,
     title_company: deal.title_company,
@@ -123,6 +122,7 @@ export function DashboardTable({
   const [editingDeal, setEditingDeal] = useState<Deal | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [togglingBuyerId, setTogglingBuyerId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
@@ -150,12 +150,12 @@ export function DashboardTable({
 
   const sortedDeals = useMemo(() => {
     const sorted = [...rows].sort((a, b) => {
-      if (
-        sortBy === "contract_price" ||
-        sortBy === "marketing_price" ||
-        sortBy === "buyers_found"
-      ) {
+      if (sortBy === "contract_price" || sortBy === "marketing_price") {
         return Number(a[sortBy]) - Number(b[sortBy]);
+      }
+
+      if (sortBy === "buyers_found") {
+        return Number(a.buyers_found) - Number(b.buyers_found);
       }
 
       if (sortBy === "assigned_rep_user_id") {
@@ -182,7 +182,6 @@ export function DashboardTable({
 
     const contractPrice = Number(values.contract_price);
     const marketingPrice = Number(values.marketing_price);
-    const buyersFound = Number(values.buyers_found);
     const assignedRepUserId =
       values.assignment_status === "Assigned"
         ? values.assigned_rep_user_id || null
@@ -190,11 +189,6 @@ export function DashboardTable({
 
     if (!Number.isFinite(contractPrice) || !Number.isFinite(marketingPrice)) {
       setErrorMessage("Contract and marketing price must be valid numbers.");
-      return;
-    }
-
-    if (!Number.isInteger(buyersFound) || buyersFound < 0) {
-      setErrorMessage("Buyers found must be a whole number >= 0.");
       return;
     }
 
@@ -211,7 +205,6 @@ export function DashboardTable({
       deal_strategy: values.deal_strategy,
       contract_price: contractPrice,
       marketing_price: marketingPrice,
-      buyers_found: buyersFound,
       access_type: values.access_type,
       dd_deadline: values.dd_deadline,
       title_company: values.title_company.trim(),
@@ -248,7 +241,6 @@ export function DashboardTable({
 
     const contractPrice = Number(values.contract_price);
     const marketingPrice = Number(values.marketing_price);
-    const buyersFound = Number(values.buyers_found);
     const assignedRepUserId =
       values.assignment_status === "Assigned"
         ? values.assigned_rep_user_id || null
@@ -256,11 +248,6 @@ export function DashboardTable({
 
     if (!Number.isFinite(contractPrice) || !Number.isFinite(marketingPrice)) {
       setErrorMessage("Contract and marketing price must be valid numbers.");
-      return;
-    }
-
-    if (!Number.isInteger(buyersFound) || buyersFound < 0) {
-      setErrorMessage("Buyers found must be a whole number >= 0.");
       return;
     }
 
@@ -277,7 +264,6 @@ export function DashboardTable({
       deal_strategy: values.deal_strategy,
       contract_price: contractPrice,
       marketing_price: marketingPrice,
-      buyers_found: buyersFound,
       access_type: values.access_type,
       dd_deadline: values.dd_deadline,
       title_company: values.title_company.trim(),
@@ -307,6 +293,31 @@ export function DashboardTable({
     );
     setEditingDeal(null);
     setSuccessMessage("Deal updated.");
+  }
+
+  async function toggleBuyersFound(deal: Deal) {
+    setErrorMessage(null);
+    setSuccessMessage(null);
+    setTogglingBuyerId(deal.id);
+
+    const nextValue = !deal.buyers_found;
+    const { error } = await supabase.rpc("set_buyers_found", {
+      p_deal_id: deal.id,
+      p_buyers_found: nextValue
+    });
+
+    setTogglingBuyerId(null);
+
+    if (error) {
+      setErrorMessage(error.message);
+      return;
+    }
+
+    setRows((current) =>
+      current.map((row) =>
+        row.id === deal.id ? { ...row, buyers_found: nextValue } : row
+      )
+    );
   }
 
   async function handleDelete(deal: Deal) {
@@ -374,7 +385,7 @@ export function DashboardTable({
               <HeaderCell label="Strategy" onClick={() => toggleSort("deal_strategy")} />
               <HeaderCell label="Contract" onClick={() => toggleSort("contract_price")} />
               <HeaderCell label="Marketing" onClick={() => toggleSort("marketing_price")} />
-              <HeaderCell label="Buyers" onClick={() => toggleSort("buyers_found")} />
+              <HeaderCell label="Buyer Found" onClick={() => toggleSort("buyers_found")} />
               <HeaderCell label="Access" onClick={() => toggleSort("access_type")} />
               <HeaderCell label="DD Date" onClick={() => toggleSort("dd_deadline")} />
               <th className="px-2 py-2 text-left font-semibold text-slate-700">DD Left</th>
@@ -418,7 +429,22 @@ export function DashboardTable({
                     <td className="px-2 py-2 text-slate-700">{deal.deal_strategy}</td>
                     <td className="px-2 py-2 text-slate-700">{formatCurrency(deal.contract_price)}</td>
                     <td className="px-2 py-2 text-slate-700">{formatCurrency(deal.marketing_price)}</td>
-                    <td className="px-2 py-2 text-slate-700">{deal.buyers_found}</td>
+                    <td className="px-2 py-2 text-slate-700">
+                      <button
+                        type="button"
+                        onClick={() => void toggleBuyersFound(deal)}
+                        disabled={togglingBuyerId === deal.id}
+                        className={cn(
+                          "inline-flex min-w-12 items-center justify-center rounded-full px-3 py-1 text-xs font-semibold transition",
+                          deal.buyers_found
+                            ? "bg-cedar-700 text-white"
+                            : "border border-slate-300 bg-slate-100 text-slate-600",
+                          togglingBuyerId === deal.id ? "opacity-70" : ""
+                        )}
+                      >
+                        {togglingBuyerId === deal.id ? "..." : "Yes"}
+                      </button>
+                    </td>
                     <td className="px-2 py-2 text-slate-700">{deal.access_type}</td>
                     <td className="px-2 py-2 text-slate-700">{deal.dd_deadline}</td>
                     <td className="px-2 py-2">
@@ -671,18 +697,6 @@ function DealFormModal({
                 step="0.01"
                 value={formValues.marketing_price}
                 onChange={(event) => updateValue("marketing_price", event.target.value)}
-                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-cedar-500 focus:ring-2 focus:ring-cedar-100"
-              />
-            </Field>
-
-            <Field label="Buyers Found">
-              <input
-                required
-                type="number"
-                min="0"
-                step="1"
-                value={formValues.buyers_found}
-                onChange={(event) => updateValue("buyers_found", event.target.value)}
                 className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-cedar-500 focus:ring-2 focus:ring-cedar-100"
               />
             </Field>

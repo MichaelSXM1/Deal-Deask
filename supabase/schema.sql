@@ -64,7 +64,7 @@ create table if not exists public.deals (
   deal_strategy public.deal_strategy not null,
   contract_price numeric(12, 2) not null check (contract_price >= 0),
   marketing_price numeric(12, 2) not null check (marketing_price >= 0),
-  buyers_found integer not null default 0,
+  buyers_found boolean not null default false,
   access_type public.access_type not null default 'Lockbox',
   dd_deadline date not null,
   title_company text not null,
@@ -90,7 +90,7 @@ alter table public.deals
 add column if not exists assigned_rep_user_id uuid references auth.users (id);
 
 alter table public.deals
-add column if not exists buyers_found integer not null default 0;
+add column if not exists buyers_found boolean not null default false;
 
 alter table public.deals
 add column if not exists access_type public.access_type not null default 'Lockbox';
@@ -98,8 +98,28 @@ add column if not exists access_type public.access_type not null default 'Lockbo
 alter table public.deals
 drop constraint if exists deals_buyers_found_nonnegative;
 
+do $$
+begin
+  if exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'deals'
+      and column_name = 'buyers_found'
+      and data_type = 'integer'
+  ) then
+    alter table public.deals
+      alter column buyers_found drop default;
+
+    alter table public.deals
+      alter column buyers_found type boolean
+      using (buyers_found > 0);
+  end if;
+end
+$$;
+
 alter table public.deals
-add constraint deals_buyers_found_nonnegative check (buyers_found >= 0);
+alter column buyers_found set default false;
 
 update public.deals
 set assigned_rep_user_id = created_by
@@ -173,6 +193,30 @@ begin
 end;
 $$;
 
+create or replace function public.set_buyers_found(
+  p_deal_id uuid,
+  p_buyers_found boolean
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if auth.uid() is null then
+    raise exception 'Not authenticated';
+  end if;
+
+  update public.deals
+  set buyers_found = p_buyers_found
+  where id = p_deal_id;
+
+  if not found then
+    raise exception 'Deal not found';
+  end if;
+end;
+$$;
+
 drop trigger if exists trg_deals_updated_at on public.deals;
 create trigger trg_deals_updated_at
 before update on public.deals
@@ -241,6 +285,8 @@ $$;
 
 revoke all on function public.is_admin(uuid) from public;
 grant execute on function public.is_admin(uuid) to authenticated;
+revoke all on function public.set_buyers_found(uuid, boolean) from public;
+grant execute on function public.set_buyers_found(uuid, boolean) to authenticated;
 
 alter table public.deals enable row level security;
 alter table public.user_roles enable row level security;

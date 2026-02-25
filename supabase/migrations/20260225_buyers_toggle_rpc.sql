@@ -1,20 +1,7 @@
--- Migration: add buyers_found and access_type fields to deals
-
-do $$
-begin
-  if not exists (
-    select 1 from pg_type where typname = 'access_type' and typnamespace = 'public'::regnamespace
-  ) then
-    create type public.access_type as enum ('Lockbox', 'Appointment', 'Open');
-  end if;
-end
-$$;
+-- Migration: make buyers_found a global yes/no toggle and expose authenticated RPC
 
 alter table public.deals
 add column if not exists buyers_found boolean not null default false;
-
-alter table public.deals
-add column if not exists access_type public.access_type not null default 'Lockbox';
 
 alter table public.deals
 drop constraint if exists deals_buyers_found_nonnegative;
@@ -41,10 +28,6 @@ $$;
 
 alter table public.deals
 alter column buyers_found set default false;
-
-update public.deals
-set access_type = 'Lockbox'
-where access_type is null;
 
 create or replace function public.set_buyers_found(
   p_deal_id uuid,
