@@ -30,3 +30,22 @@ export interface Deal {
   created_at: string;
   updated_at: string;
 }
+
+export interface StackedDeal {
+  id: string;
+  address: string;
+  acq_manager: string;
+  purchase_price: number;
+  net_to_buyer: number;
+  assignment_fee: number;
+  cashflow: number;
+  psa_signed: boolean;
+  buyer_signed: boolean;
+  emd_in: boolean;
+  lender_secured: boolean;
+  appraisal_done: boolean;
+  clear_to_close: boolean;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}

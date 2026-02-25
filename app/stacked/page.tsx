@@ -1,9 +1,9 @@
 import { redirect } from "next/navigation";
-import { DashboardTable } from "@/components/dashboard-table";
 import { DashboardSwitcher } from "@/components/dashboard-switcher";
 import { SignOutButton } from "@/components/sign-out-button";
+import { StackedDashboardTable } from "@/components/stacked-dashboard-table";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import type { AppRole, AssignableUser, Deal } from "@/lib/types";
+import type { AppRole, StackedDeal } from "@/lib/types";
 
 async function getRole(userId: string): Promise<AppRole> {
   const supabase = await createSupabaseServerClient();
@@ -16,7 +16,7 @@ async function getRole(userId: string): Promise<AppRole> {
   return data?.role === "admin" ? "admin" : "acq_manager";
 }
 
-export default async function DashboardPage() {
+export default async function StackedDashboardPage() {
   const supabase = await createSupabaseServerClient();
   const {
     data: { user }
@@ -26,20 +26,16 @@ export default async function DashboardPage() {
     redirect("/login");
   }
 
-  const { data: deals, error } = await supabase
-    .from("deals")
+  const { data: stackedDeals, error } = await supabase
+    .from("stacked_deals")
     .select("*")
-    .order("dd_deadline", { ascending: true });
+    .order("created_at", { ascending: false });
 
   if (error) {
-    throw new Error(`Failed to load deals: ${error.message}`);
+    throw new Error(`Failed to load stacked deals: ${error.message}`);
   }
 
   const role = await getRole(user.id);
-  const { data: profiles } = await supabase
-    .from("user_profiles")
-    .select("user_id,email,first_name")
-    .order("first_name", { ascending: true });
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-none flex-col gap-4 px-3 py-6 sm:px-4 lg:px-6">
@@ -50,14 +46,14 @@ export default async function DashboardPage() {
               Cedar Acquisitions
             </p>
             <h1 className="text-3xl font-semibold tracking-tight text-slate-900">
-              Active Deals
+              Stacked Deals
             </h1>
             <p className="text-sm text-slate-600">
-              Single global board. Everyone can view all deals. Edit access is role based.
+              Separate board for stacked transactions and close checklist tracking.
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <DashboardSwitcher active="standard" />
+            <DashboardSwitcher active="stacked" />
             <span className="rounded-md bg-slate-100 px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-slate-700">
               {role === "admin" ? "Admin" : "Acq Manager"}
             </span>
@@ -66,9 +62,8 @@ export default async function DashboardPage() {
         </div>
       </header>
 
-      <DashboardTable
-        deals={(deals as Deal[]) ?? []}
-        assignableUsers={(profiles as AssignableUser[]) ?? []}
+      <StackedDashboardTable
+        deals={(stackedDeals as StackedDeal[]) ?? []}
         currentUserId={user.id}
         role={role}
       />

@@ -39,6 +39,8 @@ Set these in `.env.local` and in Vercel Project Settings:
    [`supabase/migrations/20260225_buyers_toggle_rpc.sql`](./supabase/migrations/20260225_buyers_toggle_rpc.sql)
 7. Then run:
    [`supabase/migrations/20260225_add_stacked_strategy.sql`](./supabase/migrations/20260225_add_stacked_strategy.sql)
+8. Then run:
+   [`supabase/migrations/20260225_stacked_dashboard.sql`](./supabase/migrations/20260225_stacked_dashboard.sql)
 
 ## 4) Cron setup (Vercel free)
 
@@ -54,6 +56,7 @@ Authorization: Bearer <CRON_SECRET>
 ## 5) What is implemented
 
 - Global sortable single-table dashboard (`/`)
+- Dedicated stacked dashboard (`/stacked`) with a separate table
 - Full-width compact table layout (no left-right scrolling on desktop)
 - `DD Days Left` urgency badge (red at <= 48 hours)
 - Add/Edit deal modal forms wired to Supabase
@@ -61,6 +64,9 @@ Authorization: Bearer <CRON_SECRET>
 - Account-based `Assigned Rep` selector (`assigned_rep_user_id`)
 - `buyers_found` as a global Yes toggle button (light/dark, clickable by any logged-in user)
 - `access_type` field (`Lockbox`, `Appointment`, `Open`)
+- Stacked board hand-entry fields:
+  - Address, Acq Manager, Purchase Price, Net to Buyer, Assignment Fee, Cashflow
+- Stacked board checklist toggles (PSA, Buyer, EMD, Lender, Appraisal, CTC) with one-click updates
 - Supabase RLS for role-aware edit/delete logic (admin or creator/assigned-rep updates)
 - DB trigger hardening to keep `created_by` immutable and restrict assignment changes to creator/admin
 - Daily cron route that emails:
